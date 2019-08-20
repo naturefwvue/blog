@@ -1,0 +1,393 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>单页博客</title>
+    <meta charset="utf-8"/>
+    <script type="text/javascript" src="/Vue/vue.js"></script>
+    <script type="text/javascript" src="/Vue/vue-resource.min.js"></script>
+    <script type="text/javascript" src="/Scripts/kindeditor/kindeditor-min.js"></script>
+    <script type="text/javascript" src="/Scripts/kindeditor/lang/zh_CN.js"></script>
+    <script type="text/javascript" src="/boot.js"></script>
+    <script type="text/javascript">
+        var dataBaseId = 1;
+        var projectId = 1;
+        var sso;
+        var pageKind = "index";     //首页
+
+        KindEditor.ready(function (K) {
+            var options = {
+                //cssPath: '/Scripts/kindeditor/css/index.css',
+                width: '680px',
+                height:'350px'
+                //filterMode: true
+            };
+            window.editor = K.create('#articleContent', options);
+        });
+       
+        //var editor = K.create('textarea[name="articleContent"]', options);
+
+        function jsReady() {
+            
+            $("#discussForm").drag({ titleBar: "span_discussForm", isDragTmpDiv: false });
+            $("#articleDiscussList").drag({ titleBar: "span_articleDiscussList", isDragTmpDiv: false });
+            $("#articleForm").drag({ titleBar: "span_articleForm",isDragTmpDiv: false });
+            //
+             
+            //检查是否登录
+            Nature.CommonFunction.isTimeOut(function (info) {
+                if (info.state == "1") {
+                    //登录成功！
+                    //start(); 
+
+                    $("#divLoginBg").hide();
+                    $("#divLogin").hide();
+                } else
+                    //showLoginDiv1();
+                    var a = 1;
+            });
+
+        }
+         
+        //全局变量，记录当前博文相关的信息
+        var currentArticleInfo = {
+            ArticleId: 0,
+            ParentID:0,
+            ParentPath: '0',
+            Chapter: ''
+        };
+
+        //全局变量，记录博文的查询条件
+        var query = {};
+
+        //访问后台的url
+        var urlService = "blogService.ashx?action={action}&rnd={rnd}";
+
+        //访问测试数据的url
+        //var urlService = "{action}.json?";
+
+    </script>
+
+    <script type="text/javascript">
+        var dbid = "25,27";
+        var dataBaseId = 25;
+        var projectId = "1,2,3";
+        var urlMeta = '/MetaData/GetMeta.ashx?action={action}&mdid={mdid}&mpvid={mpvid}01&dbid=' + dbid + '&_=';
+        var urlData = '/Data/GetData.ashx?action={action}&mdid={mdid}&mpvid={mpvid}01&fpvid={fpvid}02&frid=-2&frids=-2&pageno={pageno}&pagerc=0&dbid=' + dbid + '&webappid=1&_=';
+        var urlTree = '/MetaData/GetMeta.ashx?action=tree&mdid=0&dbid=' + dbid + '&ProjectID=' + projectId + '&cacheKey=0&webappid=1&_=';
+
+        function myload() {
+       };
+
+    </script>
+</head>
+<body onload="myload">
+<div id="left" style="float: left;width: 300px; height: 700px; border:1px #ddd solid; margin:7px;">
+    <div style="width: 294px; border: 1px #ddd solid; margin: 2px;">
+        <!--网站分类-->
+    </div>
+    <div id="statistics" style="width: 294px; border: 1px #ddd solid; margin: 2px;">
+        <!--网站统计-->
+    </div>
+</div>
+
+<div id="main" style="float: left; width: 600px; border: 0px #ddd solid;">
+    <div id="bloglist">
+        <!--博文列表-->
+    </div>
+</div>
+
+<div id="right">
+    <input type="button" value="发 表 博 文" class="input_01" onclick="sendArticle()">
+</div>
+
+<!--弹窗之博文与讨论-->
+<div id="articleDiscussList" v-show="isShow"
+     class="layer_div_c"
+     style="top: 99px; left: 250px; width: 800px; height: 500px; z-index: 10004;display: block;">
+    <span id="span_articleDiscussList" class="layer_title" style="cursor: move;">博文和讨论
+    <a href="javascript:void(0)" v-on:click.stop="closeDiv" >X</a></span>
+    <div style="overflow-y: scroll; width: 790px; height: 450px; float: left; border: 1px solid #F00">
+        <!--博文内容-->
+        <!--讨论列表-->
+        <input type="button" value="发 表 讨 论" class="input_01" onclick="sendDiscuss()">
+    </div>
+</div>
+
+<!--弹窗之发帖-->
+<div id="articleForm" v-show="isShow" class="layer_div_c"
+     style="top: 99px; left: 554.5px; width: 800px; height: 500px; z-index: 10004; display: block;">
+    <span id="span_articleForm" class="layer_title" style="cursor: move;">我来说一说
+    <a href="javascript:void(0)" v-on:click="closeDiv">X</a></span>
+    <div style="overflow-y: scroll; width: 790px; height: 450px; float: left; border: 1px solid #F00">
+        <!--表单-->
+
+    </div>
+</div>
+
+<!--弹窗之讨论-->
+<div id="discussForm" v-show="isShow" class="layer_div_c" style="top: 99px; left: 554.5px; width: 800px; height: 500px; z-index: 10004; display: block;">
+    <span id="span_discussForm" class="layer_title" style="cursor: move;">我来说一说
+    <a href="javascript:void(0)"  v-on:click.stop="closeDiv">X</a></span>
+    <div style="overflow-y: scroll; width: 790px; height: 450px; float: left; border: 1px solid #F00">
+        <!--表单-->
+    </div>
+</div>
+
+<script type="text/javascript">
+    //网站分类、博主列表和统计
+    var blog = new Vue({
+        el: '#left',
+        data: {//分类列表
+            categoryList: [ {
+                    isActive: false,
+                    Category1Id: 0,         // 分类编号
+                    Title: '前端',          // 分类名称
+                    Content: '前端分类介绍' // 分类介绍
+                }
+            ],
+            statistics: {
+                ArticleCount: 2000,  // 博文数量
+                DiscussCount: 3000  // 讨论数量
+            }
+        },
+        created: function () {
+            //向后端申请网站统计、网站分类的数据
+            this.$http.get(urlService.replace('{action}', 'blog').replace('{rnd}', Date.now())).then(function (res) {
+                this.categoryList = res.body.categoryList; //分类数据
+                this.statistics = res.body.statistics[0];  //统计数据
+                articleForm.cate = res.body.categoryList;  //设置发布博文里的分类数据
+                  
+            }, function () {
+                console.log('请求失败处理');
+            });
+        },
+        methods: {
+            //点击分类，显示分类的博文列表
+            showArticleListByCate: function (id) {
+                //设置查询条件
+                query = {  Category1Id:id   };
+                //显示博文列表
+                blogList.getArticleList();
+                //隐藏讨论、发帖、发讨论
+                discussForm.isShow = false;
+                articleForm.isShow = false;
+                articleDiscusstList.isShow = false;
+            } 
+        }
+    });
+
+    //博文列表
+    var blogList = new Vue({
+            el: '#bloglist',
+            data: {
+                articleList: [ {
+                        ArticleId: 1,        // 博文编号
+                        Title: '测试博文',   // 博文标题
+                        Content: '博文内容', // 博文内容 取前n个文字
+                        AgreeCount: 10,      // 点赞的数量 
+                        DiscussCount: 20,    //讨论数量
+                        Hits: 0,             // 点击量
+                        AddTime: '2019-7-30' // 发表时间
+                    } 
+                ] 
+            },
+            created:function() {
+                //加载最新博文列表
+                query = {}; //清空查询条件
+                this.getArticleList();
+            },
+            methods: {
+                //根据查询条件获取博文列表
+                getArticleList: function () {
+                    var url = urlService.replace('{action}', 'articleList').replace('{rnd}', Date.now());
+                    this.$http.post(url, query, { "emulateJSON": true }).then((res) => {
+                        this.articleList = res.body.data; //后端的数据直接赋值，然后就自动绑定上了。
+                    }, function () {
+                        console.log('请求失败处理');
+                    });
+                     
+                },
+
+                //单击博文标题，显示博文详细和讨论列表
+                showArticle: function (id, article) {
+                    //显示博文详细和讨论列表，
+                    //调用articleDiscusstList.showArticle实现
+                    articleDiscusstList.showArticle(id, article);
+                }
+            }
+        });
+
+    //博文和讨论
+    var articleDiscusstList = new Vue({
+        el: '#articleDiscussList',
+        data: {
+            isShow: false,
+            article: {
+                ArticleId: 0,        // 主键
+                Title: '博文标题',   // 博文标题
+                Content: '博文内容', // 博文内容  
+                AgreeCount: 0,       // 点赞的数量 
+                DiscussCount: 0,     // 讨论数量
+                Hits: 0,             // 点击量
+                AddTime: '2019-9-9'  // 添加时间
+            },
+            discussList: [ {
+                    DiscussID: 1,        // 主键
+                    ParentID: 0,         // 上级讨论内容
+                    Chapter: '节选段落', // 节选段落
+                    Content: '讨论内容', // 讨论内容
+                    AgreeCount: 10,      // 点赞的数量 
+                    DiscussCount: 0,    // 讨论数量
+                    NickName: '金色海洋',   // 讨论人昵称
+                    AddTime: '2019-9-9', // 添加时间
+                    child: [{}] // 子回复
+                }
+            ]
+        },
+        methods: {
+            closeDiv: function () {
+                this.isShow = false;
+            },
+            //显示详细博文
+            showArticle: function (id, article) {
+                this.isShow = true;         //显示博文弹窗
+                this.article = article;     //设置博文详细内容
+                currentArticleInfo.ArticleId = id;  //记录当前博文ID
+
+                this.showDiscussList(id);
+
+                //博文内容渲染完毕后调用，先用简单的方式实现。
+                this.$nextTick(() => {
+                    var dom = $("#blogArticle").find("p,ul,h1,h2,h3,h4,h5");
+                    dom.unbind();
+                    dom.click(function () {
+                        //做快速回复 
+                        discussForm.isShow = true;
+                        discussForm.discuss.ArticleId = currentArticleInfo.ArticleId = id;
+                        discussForm.discuss.Chapter = currentArticleInfo.Chapter = this.innerText;
+                    });
+                });
+            },
+
+            //根据博文ID向后端申请讨论列表
+            showDiscussList: function (id) {
+                var url = urlService.replace('{action}', 'discussList').replace('{rnd}', Date.now());
+                this.$http.get(url + "&id=" + id).then(function (res) {
+                   
+                    articleDiscusstList.discussList = res.body.data;  //讨论列表
+
+                }, function () {
+                    console.log('请求失败处理');
+                });
+            }
+        }
+    });
+
+    //发博文
+    var articleForm = new Vue({
+        el: '#articleForm',
+        data: {
+            isShow: false,
+            cate:[],
+            article: {
+                Title: '', // 博文标题
+                Category1Id: 0,
+                Content: '' // 博文内容 
+            }
+        },
+        methods: {
+            closeDiv: function() {
+                this.isShow = false;
+            },
+            submit: function() {
+                //提交博文
+                //同步富文本编辑器的内容
+                editor.sync();
+                
+                var data = this.article;
+                data.Content = $('#articleContent').val();
+
+                var url = urlService.replace("{action}", "addArticle").replace('{rnd}', Date.now());//"blogService.ashx?action=";
+                this.$http.post(url, data, { "emulateJSON": true }).then((res) => {
+                    //console.log(reData);
+                    var re = res.body.data[0];
+                    //刷新博文列表
+                    blogList.articleList.unshift({
+                        ArticleId: re.ArticleId,  // 主键
+                        Title: re.Title,  // 博文标题
+                        Content: re.Content,  // 博文内容 取前n个文字
+                        AgreeCount: 0,  // 点赞的数量 
+                        DiscussCount: 0,  //讨论数量
+                        Hits: 0,  // 点击量
+                        AddTime: re.AddTime  // 添加时间
+                    });
+                });
+            }
+        }
+    });
+
+    //讨论
+    var discussForm = new Vue({
+        el: '#discussForm',
+        data: {
+            isShow: false,
+            discuss: {
+                NickName: '',
+                Chapter: '', // 节选段落
+                Content: '' // 讨论内容
+            }
+        },
+        methods: {
+            closeDiv: function () {
+                this.isShow = false;
+            },
+            //提交讨论
+            submit: function () {
+                var data = {
+                    ArticleId: currentArticleInfo.ArticleId,  // 外键，博文表
+                    NickName: this.discuss.NickName,
+                    ParentID: 0,  // 自链接
+                    //ParentPath: '0',  // 父节点路径
+                    Chapter: currentArticleInfo.Chapter,  // 节选段落
+                    Content: this.discuss.Content  // 讨论内容
+                }
+                 
+                var url = urlService.replace("{action}", "addDiscuss").replace('{rnd}', Date.now());//"blogService.ashx?=";
+                this.$http.post(url, data, { "emulateJSON": true }).then((res) => {
+                    //刷新回复列表
+                    var re = res.body.data[0];
+                    articleDiscusstList.discussList.push({
+                        DiscussID: re.DiscussID, // 主键
+                        ParentID: 0, // 上级讨论内容
+                        Chapter: currentArticleInfo.Chapter, // 节选段落
+                        Content: re.Content, // 讨论内容
+                        AgreeCount: 0, // 点赞的数量，一个用户只能点一次
+                        DiscussCount: 0, // 有多少讨论
+                        NickName: re.NickName, // 添加人昵称
+                        AddTime: re.AddTime, // 添加时间
+                        child: [] //子回复
+                    });
+                });
+
+            }
+        }
+    });
+
+
+    function sendArticle() {
+        articleForm.isShow = true;
+    }
+
+    function sendDiscuss() {
+        discussForm.isShow = true;
+        discussForm.discuss.Chapter = '';
+    }
+   
+    function pc() {
+        alert(33);
+    }
+
+    </script>
+</body>
+</html>

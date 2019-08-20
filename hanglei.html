@@ -1,0 +1,141 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>行列转换的一个demo</title>
+    <meta charset="utf-8"/>
+    <script type="text/javascript" src="vue.js"></script>
+    <meta charset="utf-8" />
+    <link type="text/css" rel="stylesheet" media="screen" href="css/mangoGlobal.css">
+    <link type="text/css" rel="stylesheet" media="screen" href="css/mis-style-p.css">
+    <link type="text/css" rel="stylesheet" media="screen" href="css/MisStyle_v2.css">
+    <link type="text/css" rel="stylesheet" media="screen" href="css/css2.css">
+
+    <script type="text/javascript">
+
+    </script>
+</head>
+<body>
+
+<div id="app">
+    <table class="table_default1" style="width: 400px;">
+        <tr>
+            <th v-for="key in tableHeader">
+                {{key}} 
+            </th>
+        </tr>
+        <tr v-for="tr in tableBody">
+            <td v-for="td in tr">
+                {{td}}
+            </td>
+        </tr>
+    </table>
+</div>
+
+
+<script type="text/javascript">
+    var form = new Vue({
+        el: "#app",
+        data: {
+            tableHeader: {  }, //绑定表头
+            tableBody: { } //绑定数据
+        },
+        created: function () {
+            //得到测试数据
+            var testdata = [
+                {
+                    studentID: 0001,
+                    name: '小红',
+                    subject: '数学',
+                    mark: 100
+                }, {
+                    studentID: 0001,
+                    name: '小红',
+                    subject: '语文',
+                    mark: 90
+                }, {
+                    studentID: 0001,
+                    name: '小红',
+                    subject: '英语',
+                    mark: 91
+                }, {
+                    studentID: 0002,
+                    name: '小明',
+                    subject: '数学',
+                    mark: 93
+                }, {
+                    studentID: 0002,
+                    name: '小明',
+                    subject: '语文',
+                    mark: 87
+                }, {
+                    studentID: 0002,
+                    name: '小明',
+                    subject: '英语',
+                    mark: 88
+                }, {
+                    studentID: 0002,
+                    name: '小明',
+                    subject: '物理',
+                    mark: 88
+                }, {
+                    studentID: 0003,
+                    name: '韩梅梅',
+                    subject: '数学',
+                    mark: 94
+                }, {
+                    studentID: 0003,
+                    name: '韩梅梅',
+                    subject: '语文',
+                    mark: 99
+                }, {
+                    studentID: 0003,
+                    name: '韩梅梅',
+                    subject: '英语',
+                    mark: 98
+                }
+            ];
+
+            //第一次遍历，制作 tableHeader
+            var th = {}
+            th["studentID"] = '学号';  //固定列
+            th["name"] = '姓名';
+
+            //筛选科目
+            var thKey = {}
+            for (var i = 0; i < testdata.length; i++) {
+                thKey[testdata[i].subject] = 1;  //动态列
+            }
+
+            //把科目加到th里面 ，动态增加列
+            for (var key in thKey) {
+                th[key] = key;
+            }
+
+            this.tableHeader = th;
+
+            //第二次遍历，制作tr的行
+            var tr = {};
+            for (var i = 0; i < testdata.length; i++) {
+                var d = testdata[i];
+                tr['s' + d.studentID] = {
+                    studentID: d.studentID, //固定列
+                    name: d.name
+                }
+            }
+            //第三次遍历，添加科目的成绩
+            for (var i = 0; i < testdata.length; i++) {
+                var d = testdata[i];
+                tr['s' + d.studentID][d.subject] = d.mark + 100;  //动态列
+            }
+
+            this.tableBody = tr;
+
+        }
+    });
+
+</script>
+
+
+</body>
+</html>
